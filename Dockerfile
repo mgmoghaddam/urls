@@ -1,9 +1,9 @@
 FROM golang:latest
+RUN mkdir /app
+ADD . /app
 WORKDIR /app
-COPY go.mod ./
-COPY go.sum ./
 RUN go mod download
-COPY *.go ./
-RUN go build -o /urls
+COPY . .
+RUN go build -o main .
 EXPOSE 8090
-CMD ["/urls"]
+CMD ["/app/main"]
