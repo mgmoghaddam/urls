@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"log"
 	"math"
 	"net/url"
 	"strings"
@@ -29,6 +30,8 @@ var db *gorm.DB
 var cache *redis.Client
 
 var mu sync.Mutex
+var wg sync.WaitGroup
+var stopHitCounter = make(chan bool)
 
 func init() {
 	configs.InitViper()
@@ -73,15 +76,16 @@ func Expand(short string) (string, error) {
 			}
 			return "", err
 		}
+		mu.Lock()
 		db.Model(&url).Update("hit", gorm.Expr("hit + ?", 1))
+		mu.Unlock()
 		cache.Set(short, url.Original, 0)
 		return url.Original, nil
 	} else if err != nil {
 		return "", err
 	}
-	mu.Lock()
-	db.Model(&URL{}).Where("short = ?", short).Update("hit", gorm.Expr("hit + ?", 1))
-	mu.Unlock()
+	cache.Publish("hit_count", short)
+	go hitCounter()
 	return original, nil
 }
 
@@ -150,4 +154,35 @@ func bijectiveFunction(s string) string {
 	}
 
 	return string(chars)
+}
+
+func hitCounter() {
+	sub := cache.Subscribe("hit_count")
+	defer func(sub *redis.PubSub) {
+		err := sub.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(sub)
+
+	for {
+		select {
+		case <-stopHitCounter:
+			return
+		default:
+			msg, err := sub.ReceiveMessage()
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			go incrementHit(msg.Payload)
+		}
+	}
+}
+
+func incrementHit(shortURL string) {
+	mu.Lock()
+	db.Model(&URL{}).Where("short = ?", shortURL).Update("hit", gorm.Expr("hit + ?", 1))
+	mu.Unlock()
+	stopHitCounter <- true
 }
