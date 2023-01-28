@@ -1,6 +1,6 @@
 db:
   user: "root"
-  pass: "M&$)!_root"
+  pass: "M&S)!_root"
   name: "urlshortner"
   host: "mysql"
   port: "3306"
