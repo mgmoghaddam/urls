@@ -9,7 +9,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8090",
+    "host": "https://mgmo.tech",
     "basePath": "/api/v1",
     "paths": {
         "/url/expand/{short}": {
