@@ -1,11 +1,11 @@
 db:
   user: "root"
-  pass: "M&S)!_root"
+  pass: "asd123ASD!@#"
   name: "urlshortner"
-  host: "mysql"
+  host: "localhost"
   port: "3306"
 redis:
-  host: "redis"
+  host: "localhost"
   port: "6379"
   password: ""
   db: 0

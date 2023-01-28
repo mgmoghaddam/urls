@@ -98,10 +98,13 @@ func generateShortURL(originalURL string) string {
 	id := bijectiveFunction(originalURL)
 	u, _ := url.Parse(originalURL)
 	var mainDomain string
-	if strings.HasPrefix(u.Host, "www.") {
-		mainDomain = strings.ReplaceAll(u.Host, "www.", "")
-	} else {
+	if u.Host != "" {
 		mainDomain = u.Host
+	} else {
+		mainDomain = u.Path
+	}
+	if strings.HasPrefix(mainDomain, "www.") {
+		mainDomain = strings.ReplaceAll(mainDomain, "www.", "")
 	}
 
 	//removing vowels I believe can help it to be more human-friendly
