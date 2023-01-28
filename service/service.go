@@ -111,7 +111,12 @@ func generateShortURL(originalURL string) string {
 	uHost := removeVowels(mainDomain)
 
 	// For human-readable function add first 3 characters of originalURL
-	shortUrl := uHost[:3] + id[:3]
+	var shortUrl string
+	if len(uHost) > 2 {
+		shortUrl = uHost[:3] + id[:3]
+	} else {
+		shortUrl = mainDomain[:3] + id[:3]
+	}
 
 	return shortUrl
 }
