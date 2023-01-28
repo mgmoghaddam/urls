@@ -1,0 +1,73 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Swagger Example API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8090",
+    "basePath": "/api/v1",
+    "paths": {
+        "/url/expand/{short}": {
+            "get": {
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "short",
+                        "name": "short",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/url/hits/{short}": {
+            "get": {
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "short",
+                        "name": "short",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/url/shorten": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "query params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ShortenURL.req"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        }
+    },
+    "definitions": {
+        "handler.ShortenURL.req": {
+            "type": "object",
+            "required": [
+                "original_url"
+            ],
+            "properties": {
+                "original_url": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

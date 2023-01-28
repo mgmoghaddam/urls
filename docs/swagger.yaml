@@ -1,0 +1,47 @@
+basePath: /api/v1
+definitions:
+  handler.ShortenURL.req:
+    properties:
+      original_url:
+        type: string
+    required:
+    - original_url
+    type: object
+host: localhost:8090
+info:
+  contact: {}
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /url/expand/{short}:
+    get:
+      parameters:
+      - description: short
+        in: path
+        name: short
+        required: true
+        type: string
+      responses: {}
+  /url/hits/{short}:
+    get:
+      parameters:
+      - description: short
+        in: path
+        name: short
+        required: true
+        type: string
+      responses: {}
+  /url/shorten:
+    post:
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ShortenURL.req'
+      responses: {}
+swagger: "2.0"
