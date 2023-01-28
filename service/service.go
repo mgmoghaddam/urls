@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 	"urls/configs"
 
@@ -26,6 +27,8 @@ type URL struct {
 
 var db *gorm.DB
 var cache *redis.Client
+
+var mu sync.Mutex
 
 func init() {
 	configs.InitViper()
@@ -76,7 +79,9 @@ func Expand(short string) (string, error) {
 	} else if err != nil {
 		return "", err
 	}
+	mu.Lock()
 	db.Model(&URL{}).Where("short = ?", short).Update("hit", gorm.Expr("hit + ?", 1))
+	mu.Unlock()
 	return original, nil
 }
 
