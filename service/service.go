@@ -30,8 +30,6 @@ var db *gorm.DB
 var cache *redis.Client
 
 var mu sync.Mutex
-var wg sync.WaitGroup
-var stopHitCounter = make(chan bool)
 
 func init() {
 	configs.InitViper()
@@ -67,17 +65,24 @@ func Shorten(original string) (string, error) {
 
 func GetURLHits(shortURL string) (int, error) {
 	var hits int
+
 	tx := db.Begin()
+
 	redisHits, err := cache.Get(shortURL + "_hits").Int()
 	if err != nil {
 		redisHits = 0
 	}
+
 	err = tx.Model(&URL{}).Where("short = ?", shortURL).
 		Updates(map[string]interface{}{"hit": gorm.Expr("hit + ?", redisHits)}).Error
 	if err != nil {
 		return 0, err
 	}
+
 	cache.Del(shortURL)
+
+	tx.Commit()
+
 	return hits, nil
 }
 
@@ -166,16 +171,20 @@ func UpdateDBWithHits() {
 		log.Println(err)
 		return
 	}
+
 	for _, key := range keys {
 		shortURL := strings.TrimSuffix(key, "_hit")
+
 		hit, err := cache.Get(key).Int64()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
+
 		mu.Lock()
 		db.Model(&URL{}).Where("short = ?", shortURL).Update("hit", gorm.Expr("hit + ?", hit))
 		mu.Unlock()
+
 		cache.Del(key)
 	}
 }
