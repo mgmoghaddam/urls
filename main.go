@@ -43,9 +43,8 @@ func main() {
 
 func scheduleUpdateHits() {
 	// Schedule the updateDBWithHits function to run every 10 minutes
-	ticker := time.NewTicker(10 * time.Minute)
 	go func() {
-		for range ticker.C {
+		for range time.Tick(10 * time.Minute) {
 			service.UpdateDBWithHits()
 		}
 	}()
