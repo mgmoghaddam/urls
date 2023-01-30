@@ -65,33 +65,15 @@ func Shorten(original string) (string, error) {
 	return shortURL, nil
 }
 
-// Expand retrieves the original URL from the MySQL database and Redis cache, and increases the click ratio (hit rate)
-func Expand(short string) (string, error) {
-	original, err := cache.Get(short).Result()
-	if err == redis.Nil {
-		var url URL
-		if err := db.Model(&URL{}).Where("short = ?", short).First(&url).Error; err != nil {
-			if gorm.IsRecordNotFoundError(err) {
-				return "", errors.New("Short URL not found")
-			}
-			return "", err
-		}
-		mu.Lock()
-		db.Model(&url).Update("hit", gorm.Expr("hit + ?", 1))
-		mu.Unlock()
-		cache.Set(short, url.Original, 0)
-		return url.Original, nil
-	} else if err != nil {
-		return "", err
-	}
-	cache.Publish("hit_count", short)
-	go hitCounter()
-	return original, nil
-}
-
 func GetURLHits(shortURL string) (int, error) {
 	var hits int
-	err := db.Model(&URL{}).Where("short = ?", shortURL).Select("hit").Row().Scan(&hits)
+	tx := db.Begin()
+	redisHits, err := cache.Get(shortURL + "_hits").Int()
+	if err != nil {
+		redisHits = 0
+	}
+	err = tx.Model(&URL{}).Where("short = ?", shortURL).
+		Updates(map[string]interface{}{"hit": gorm.Expr("hit + ?", redisHits)}).Error
 	if err != nil {
 		return 0, err
 	}
@@ -156,33 +138,43 @@ func bijectiveFunction(s string) string {
 	return string(chars)
 }
 
-func hitCounter() {
-	sub := cache.Subscribe("hit_count")
-	defer func(sub *redis.PubSub) {
-		err := sub.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}(sub)
-
-	for {
-		select {
-		case <-stopHitCounter:
-			return
-		default:
-			msg, err := sub.ReceiveMessage()
-			if err != nil {
-				log.Println(err)
-				continue
+// Expand retrieves the original URL from the MySQL database and Redis cache, and increases the click ratio (hit rate)
+func Expand(short string) (string, error) {
+	original, err := cache.Get(short).Result()
+	if err == redis.Nil {
+		var url URL
+		if err := db.Model(&URL{}).Where("short = ?", short).First(&url).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return "", errors.New("Short URL not found")
 			}
-			go incrementHit(msg.Payload)
+			return "", err
 		}
+		cache.Set(short, url.Original, 0)
+		cache.Incr(short + "_hit")
+		return url.Original, nil
+	} else if err != nil {
+		return "", err
 	}
+	cache.Incr(short + "_hit")
+	return original, nil
 }
 
-func incrementHit(shortURL string) {
-	mu.Lock()
-	db.Model(&URL{}).Where("short = ?", shortURL).Update("hit", gorm.Expr("hit + ?", 1))
-	mu.Unlock()
-	stopHitCounter <- true
+func UpdateDBWithHits() {
+	keys, err := cache.Keys("*_hit").Result()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for _, key := range keys {
+		shortURL := strings.TrimSuffix(key, "_hit")
+		hit, err := cache.Get(key).Int64()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		mu.Lock()
+		db.Model(&URL{}).Where("short = ?", shortURL).Update("hit", gorm.Expr("hit + ?", hit))
+		mu.Unlock()
+		cache.Del(key)
+	}
 }

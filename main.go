@@ -5,9 +5,11 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
+	"time"
 	"urls/configs"
 	_ "urls/docs"
 	"urls/handler"
+	"urls/service"
 )
 
 func init() {
@@ -35,4 +37,16 @@ func main() {
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	_ = r.Run(":8090")
+
+	scheduleUpdateHits()
+}
+
+func scheduleUpdateHits() {
+	// Schedule the updateDBWithHits function to run every 10 minutes
+	ticker := time.NewTicker(10 * time.Minute)
+	go func() {
+		for range ticker.C {
+			service.UpdateDBWithHits()
+		}
+	}()
 }
