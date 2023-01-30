@@ -77,6 +77,7 @@ func GetURLHits(shortURL string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	cache.Del(shortURL)
 	return hits, nil
 }
 
